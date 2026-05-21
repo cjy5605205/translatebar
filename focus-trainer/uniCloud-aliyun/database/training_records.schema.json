@@ -1,0 +1,19 @@
+{
+  "bsonType": "object",
+  "required": ["user_id", "game_type", "score", "result", "date"],
+  "permission": {
+    "read": true,
+    "create": true,
+    "update": false,
+    "delete": false
+  },
+  "properties": {
+    "_id": { "bsonType": "string" },
+    "user_id": { "bsonType": "string", "description": "关联users._id" },
+    "game_type": { "bsonType": "string", "enum": ["number", "color", "memory"], "description": "游戏类型" },
+    "score": { "bsonType": "int", "description": "成绩" },
+    "result": { "bsonType": "string", "enum": ["pass", "fail"], "description": "结果" },
+    "date": { "bsonType": "string", "description": "训练日期 YYYY-MM-DD" },
+    "created_at": { "bsonType": "timestamp", "description": "创建时间" }
+  }
+}
