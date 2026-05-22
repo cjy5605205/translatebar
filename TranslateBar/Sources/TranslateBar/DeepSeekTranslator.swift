@@ -1,9 +1,9 @@
 import Foundation
 
 enum DeepSeekTranslator {
-    private static let baseURL = "https://api.deepseek.com/v1/chat/completions"
+    private static let baseURL = "https://api.deepseek.com/chat/completions"
     private static let model = "deepseek-chat"
-    private static let timeout: TimeInterval = 10
+    private static let timeout: TimeInterval = 15
 
     struct RequestBody: Encodable {
         let model: String
@@ -26,16 +26,24 @@ enum DeepSeekTranslator {
         }
     }
 
+    struct ErrorBody: Decodable {
+        let error: ErrorInfo
+        struct ErrorInfo: Decodable {
+            let message: String
+            let type: String?
+        }
+    }
+
     enum TranslateError: LocalizedError {
         case noAPIKey
         case invalidResponse
-        case httpError(Int)
+        case httpError(Int, String)
 
         var errorDescription: String? {
             switch self {
             case .noAPIKey: return "未配置 API Key"
             case .invalidResponse: return "服务器返回异常"
-            case .httpError(let code): return "HTTP 错误 (\(code))"
+            case .httpError(let code, let detail): return "HTTP \(code): \(detail)"
             }
         }
     }
@@ -45,6 +53,10 @@ enum DeepSeekTranslator {
         guard let apiKey = KeychainManager.load("deepseek_api_key") else {
             throw TranslateError.noAPIKey
         }
+
+        // Mask key for logging
+        let maskedKey = String(apiKey.prefix(6)) + "..." + String(apiKey.suffix(4))
+        print("[DeepSeek] Translating '\(text)' to \(targetLang), key=\(maskedKey)")
 
         let systemPrompt = """
         You are a professional translator. Translate the following text to natural, conversational \(targetLang). \
@@ -68,21 +80,48 @@ enum DeepSeekTranslator {
         request.httpBody = try JSONEncoder().encode(body)
         request.timeoutInterval = timeout
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response): (Data, URLResponse)
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch {
+            print("[DeepSeek] Network error: \(error.localizedDescription)")
+            throw TranslateError.httpError(0, error.localizedDescription)
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
+            print("[DeepSeek] Invalid response type")
             throw TranslateError.invalidResponse
         }
+
+        print("[DeepSeek] HTTP status: \(httpResponse.statusCode)")
+
         guard (200...299).contains(httpResponse.statusCode) else {
-            throw TranslateError.httpError(httpResponse.statusCode)
+            let bodyStr = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            print("[DeepSeek] Error body: \(bodyStr)")
+
+            // Try to parse error message from DeepSeek
+            if let errorBody = try? JSONDecoder().decode(ErrorBody.self, from: data) {
+                throw TranslateError.httpError(httpResponse.statusCode, errorBody.error.message)
+            }
+            throw TranslateError.httpError(httpResponse.statusCode, bodyStr)
         }
 
-        let decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
+        let decoded: ResponseBody
+        do {
+            decoded = try JSONDecoder().decode(ResponseBody.self, from: data)
+        } catch {
+            let bodyStr = String(data: data, encoding: .utf8) ?? "<non-utf8>"
+            print("[DeepSeek] Decode error: \(error), body: \(bodyStr)")
+            throw TranslateError.invalidResponse
+        }
+
         guard let translatedText = decoded.choices.first?.message.content.trimmingCharacters(in: .whitespacesAndNewlines),
               !translatedText.isEmpty else {
+            print("[DeepSeek] Empty or missing choices in response")
             throw TranslateError.invalidResponse
         }
 
+        print("[DeepSeek] Success: '\(translatedText)'")
         return translatedText
     }
 }

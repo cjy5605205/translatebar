@@ -87,7 +87,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } catch {
                 await MainActor.run {
                     menuBarController.setStatus(.failure)
-                    showNotification(title: "翻译失败", body: "请检查网络连接或启动 Ollama")
+                    let msg = "\(error)"
+                    print("[TranslateBar] Translation failed: \(msg)")
+                    showNotification(title: "翻译失败", body: msg)
                 }
             }
         }
