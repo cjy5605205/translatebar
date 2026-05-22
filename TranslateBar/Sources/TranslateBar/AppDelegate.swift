@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferencesWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        setupMainMenu()
         menuBarController.setup()
 
         hotkeyManager.onHotkeyPressed = { [weak self] in
@@ -15,7 +16,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkeyManager.register()
 
-        // Request Accessibility permission
         let options: [String: Any] = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         AXIsProcessTrustedWithOptions(options as CFDictionary)
     }
@@ -24,10 +24,44 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.unregister()
     }
 
+    /// Set up NSApp.mainMenu so that Cmd+Q, Cmd+V, Cmd+C etc. work in all windows.
+    private func setupMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App menu
+        let appMenu = NSMenu()
+        let quitItem = NSMenuItem(
+            title: "退出 TranslateBar",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        appMenu.addItem(quitItem)
+
+        let appMenuItem = NSMenuItem()
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        // Edit menu (enables Cmd+V, Cmd+C, Cmd+X, Cmd+A)
+        let editMenu = NSMenu(title: "Edit")
+        editMenu.addItem(NSMenuItem(title: "剪切", action: #selector(NSText.cut(_:)), keyEquivalent: "x"))
+        editMenu.addItem(NSMenuItem(title: "复制", action: #selector(NSText.copy(_:)), keyEquivalent: "c"))
+        editMenu.addItem(NSMenuItem(title: "粘贴", action: #selector(NSText.paste(_:)), keyEquivalent: "v"))
+        editMenu.addItem(NSMenuItem(title: "全选", action: #selector(NSText.selectAll(_:)), keyEquivalent: "a"))
+
+        let editMenuItem = NSMenuItem()
+        editMenuItem.submenu = editMenu
+        mainMenu.addItem(editMenuItem)
+
+        NSApp.mainMenu = mainMenu
+    }
+
+    func reregisterHotkey() {
+        hotkeyManager.reregister()
+    }
+
     private func handleTranslation() {
         menuBarController.setStatus(.translating)
 
-        // Get text from focused element
         guard let text = TextAccessor.getFocusedText() else {
             menuBarController.setStatus(.failure)
             showNotification(title: "翻译失败", body: "无法读取当前输入框的内容")
@@ -39,13 +73,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Run translation async
         Task {
             do {
                 let result = try await TranslationEngine.translate(text)
                 await MainActor.run {
                     if result == text {
-                        // Unchanged (pure symbols, etc.)
                         menuBarController.setStatus(.skipped)
                     } else {
                         TextAccessor.replaceFocusedText(result)
@@ -76,13 +108,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc func showSettingsWindow(_ sender: Any?) {
         if preferencesWindow == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 400, height: 250),
+                contentRect: NSRect(x: 0, y: 0, width: 420, height: 320),
                 styleMask: [.titled, .closable],
                 backing: .buffered,
                 defer: false
             )
             window.title = "TranslateBar 偏好设置"
-            window.contentView = NSHostingView(rootView: PreferencesView())
+            window.contentView = NSHostingView(rootView: PreferencesView(appDelegate: self))
             window.center()
             preferencesWindow = window
         }
