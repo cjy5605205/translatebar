@@ -20,9 +20,13 @@ final class MenuBarController {
         }
 
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "偏好设置...", action: #selector(openPreferences), keyEquivalent: ","))
+        let prefItem = NSMenuItem(title: "偏好设置...", action: #selector(openPreferences), keyEquivalent: ",")
+        prefItem.target = self
+        menu.addItem(prefItem)
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出 TranslateBar", action: #selector(quitApp), keyEquivalent: "q"))
+        let quitItem = NSMenuItem(title: "退出 TranslateBar", action: #selector(quitApp), keyEquivalent: "q")
+        quitItem.target = self
+        menu.addItem(quitItem)
         statusItem.menu = menu
     }
 
@@ -70,7 +74,7 @@ final class MenuBarController {
     }
 
     @objc private func openPreferences() {
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        NSApp.sendAction(#selector(AppDelegate.showSettingsWindow(_:)), to: nil, from: nil)
     }
 
     @objc private func quitApp() {
