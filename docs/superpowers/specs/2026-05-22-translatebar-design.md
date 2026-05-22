@@ -8,7 +8,7 @@
 
 1. **一键翻译替换** — 按快捷键读取当前焦点输入框的内容，翻译后替换回原输入框
 2. **自动语言检测** — 统计 CJK 汉字占比，>30% 视为中文→英文，否则英文→中文
-3. **混合翻译引擎** — 主用 DeepL API，网络不可用时降级到 Ollama 本地模型
+3. **混合翻译引擎** — 主用 DeepSeek API，网络不可用时降级到 Ollama 本地模型
 4. **菜单栏常驻** — 仅菜单栏图标，无 Dock 图标，内存占用极低
 5. **翻译质量** — 要求翻译自然、地道，符合日常表达习惯，不死板直译
 
@@ -36,7 +36,7 @@ macOS 系统（任意 App 文本框）
 │                                  │
 │   TranslationEngine              │
 │   ├─ LanguageDetector (本地判断)  │
-│   ├─ DeepLTranslator (在线)      │
+│   ├─ DeepSeekTranslator (在线)     │
 │   └─ OllamaTranslator (离线降级)  │
 │                                  │
 │   Preferences (UserDefaults)     │
@@ -72,12 +72,13 @@ macOS 系统（任意 App 文本框）
 - 汉字占比 >30% → 中译英；否则 → 英译中
 - 纯数字/符号 → 直接返回原文，不调用翻译
 
-**在线翻译 (DeepLTranslator)**
-- 调用 DeepL API v2 `/translate` 端点
+**在线翻译 (DeepSeekTranslator)**
+- 调用 DeepSeek API (OpenAI 兼容格式)，使用 `deepseek-chat` 模型
+- 通过 System Prompt 指定翻译任务，确保翻译自然地道
 - API Key 存储在 macOS Keychain
-- 免费版额度：50 万字符/月
-- 超时 5 秒，超时或网络错误自动降级到本地模型
-- Prompt 引导（如 target_lang 参数）保证翻译自然流畅
+- 定价极低（约 ¥1/百万 token），适合高频使用
+- 超时 10 秒，超时或网络错误自动降级到本地模型
+- System Prompt 示例：`"You are a professional translator. Translate the following text to natural, conversational ${targetLang}. The translation should sound like it was originally written by a native speaker. Do NOT translate word-for-word. Return only the translation, no explanation."`
 
 **本地翻译 (OllamaTranslator)**
 - 通过 Ollama 本地 HTTP API (http://localhost:11434) 调用
@@ -88,7 +89,7 @@ macOS 系统（任意 App 文本框）
 ### 5. Preferences
 - 窗口使用 SwiftUI `Settings` 场景
 - 快捷键录制控件
-- DeepL API Key 输入框（写入 Keychain）
+- DeepSeek API Key 输入框（写入 Keychain）
 - 本地模型名称配置（默认 qwen2.5:3b）
 - 开机启动选项（Login Item）
 
@@ -108,7 +109,7 @@ HotkeyManager ──▶ TextAccessor ──▶ 获取焦点文本框 & 选中/�
        │                         │                      │
        │                         └──────────┬───────────┘
        │                                    ▼
-       │                            DeepLTranslator (在线)
+       │                            DeepSeekTranslator (在线)
        │                              │         │
        │                          成功 │        │ 失败/超时
        │                              ▼         ▼
@@ -129,7 +130,7 @@ HotkeyManager ──▶ TextAccessor ──▶ 获取焦点文本框 & 选中/�
 |------|------|
 | 无焦点文本框 | 静默忽略，不提示 |
 | 选中文本为空 | 尝试模拟 Cmd+A 全选后再读取 |
-| DeepL API 超时/错误 | 自动降级到 Ollama 本地模型 |
+| DeepSeek API 超时/错误 | 自动降级到 Ollama 本地模型 |
 | Ollama 不可用 | 系统通知 "翻译失败：请检查网络或启动 Ollama" |
 | 翻译结果与原文相同 | 仍替换（可能是专有名词，用户无感） |
 | 纯数字/标点符号 | 不翻译，菜单栏图标闪烁 0.3 秒提示 |
@@ -164,7 +165,7 @@ TranslateBar/
 │   ├── Translation/
 │   │   ├── TranslationEngine.swift      // 翻译调度（主入口）
 │   │   ├── LanguageDetector.swift       // 本地语言检测
-│   │   ├── DeepLTranslator.swift        // DeepL API 翻译
+│   │   ├── DeepSeekTranslator.swift      // DeepSeek API 翻译
 │   │   └── OllamaTranslator.swift       // 本地 Ollama 翻译
 │   ├── Preferences/
 │   │   └── PreferencesView.swift        // SwiftUI 设置界面
