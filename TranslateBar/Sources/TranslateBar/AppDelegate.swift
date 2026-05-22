@@ -69,6 +69,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            print("[TranslateBar] Text empty after trim, skipping")
             menuBarController.setStatus(.skipped)
             return
         }
@@ -78,6 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 let result = try await TranslationEngine.translate(text)
                 await MainActor.run {
                     if result == text {
+                        print("[TranslateBar] Result unchanged, skipping (text=\(text.prefix(30)))")
                         menuBarController.setStatus(.skipped)
                     } else {
                         TextAccessor.replaceFocusedText(result)

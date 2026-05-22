@@ -6,16 +6,29 @@ enum TextAccessor {
     /// Returns the currently selected text in the focused UI element,
     /// or all text if nothing is selected.
     static func getFocusedText() -> String? {
-        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        guard let app = NSWorkspace.shared.frontmostApplication else {
+            print("[TextAccessor] No frontmost app")
+            return nil
+        }
 
         let pid = app.processIdentifier
+        print("[TextAccessor] Frontmost app: \(app.localizedName ?? "?") pid=\(pid)")
+
         let appElement = AXUIElementCreateApplication(pid)
 
         var focusedElement: CFTypeRef?
         let result = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
-        guard result == .success, let element = focusedElement else { return nil }
+        guard result == .success, let element = focusedElement else {
+            print("[TextAccessor] No focused element, AX error: \(result.rawValue)")
+            return nil
+        }
 
         let axElement = element as! AXUIElement
+
+        // Log the focused element role
+        var role: CFTypeRef?
+        AXUIElementCopyAttributeValue(axElement, kAXRoleAttribute as CFString, &role)
+        print("[TextAccessor] Focused element role: \(role as? String ?? "?")")
 
         // Try selected text first
         var selectedText: CFTypeRef?
@@ -23,6 +36,7 @@ enum TextAccessor {
         if selectedResult == .success,
            let text = selectedText as? String,
            !text.isEmpty {
+            print("[TextAccessor] Selected text (\(text.count) chars): '\(text.prefix(50))'")
             return text
         }
 
@@ -30,9 +44,11 @@ enum TextAccessor {
         var allText: CFTypeRef?
         let valueResult = AXUIElementCopyAttributeValue(axElement, kAXValueAttribute as CFString, &allText)
         if valueResult == .success, let text = allText as? String, !text.isEmpty {
+            print("[TextAccessor] Value text (\(text.count) chars): '\(text.prefix(50))'")
             return text
         }
 
+        print("[TextAccessor] No readable text on focused element (selectedResult=\(selectedResult.rawValue), valueResult=\(valueResult.rawValue))")
         return nil
     }
 
@@ -48,8 +64,7 @@ enum TextAccessor {
         guard result == .success, let element = focusedElement else { return }
 
         let axElement = element as! AXUIElement
-
-        // Set the full value of the text field
         AXUIElementSetAttributeValue(axElement, kAXValueAttribute as CFString, newText as CFTypeRef)
+        print("[TextAccessor] Replaced text with '\(newText.prefix(30))'")
     }
 }
