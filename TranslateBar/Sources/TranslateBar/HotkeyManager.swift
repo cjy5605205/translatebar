@@ -19,6 +19,8 @@ final class HotkeyManager {
         let keyCode = UInt32(UserDefaults.standard.integer(forKey: "hotkey_keyCode"))
         let modifiers = UInt32(UserDefaults.standard.integer(forKey: "hotkey_modifiers"))
 
+        print("[Hotkey] Registering keyCode=\(keyCode) modifiers=\(modifiers) (\(HotkeyManager.currentHotkeyDisplayString()))")
+
         let hotkeyID = EventHotKeyID(signature: 0x54524252, id: 1)
 
         let status = RegisterEventHotKey(
@@ -31,9 +33,10 @@ final class HotkeyManager {
         )
 
         guard status == noErr else {
-            print("Failed to register hotkey: \(status)")
+            print("[Hotkey] FAILED to register hotkey, OSStatus=\(status). The shortcut may conflict with another app.")
             return
         }
+        print("[Hotkey] Registered successfully")
 
         let eventSpec = EventTypeSpec(
             eventClass: OSType(kEventClassKeyboard),

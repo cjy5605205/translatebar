@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var preferencesWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        print("[TranslateBar] App launched, bundle=\(Bundle.main.bundleIdentifier ?? "nil")")
         setupMainMenu()
         menuBarController.setup()
 
