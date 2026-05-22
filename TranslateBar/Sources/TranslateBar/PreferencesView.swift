@@ -56,6 +56,7 @@ struct ShortcutCaptureView: NSViewRepresentable {
 
                 UserDefaults.standard.set(keyCode, forKey: "hotkey_keyCode")
                 UserDefaults.standard.set(carbonModifiers, forKey: "hotkey_modifiers")
+                UserDefaults.standard.set(true, forKey: "hotkey_customized")
 
                 DispatchQueue.main.async {
                     self.isRecording.wrappedValue = false
@@ -82,7 +83,7 @@ struct PreferencesView: View {
     @AppStorage("ollama_model") private var ollamaModel = "qwen2.5:3b"
     @AppStorage("launch_at_login") private var launchAtLogin = false
     @AppStorage("hotkey_keyCode") private var hotkeyKeyCode = 17
-    @AppStorage("hotkey_modifiers") private var hotkeyModifiers = kControlKey | kShiftKey
+    @AppStorage("hotkey_modifiers") private var hotkeyModifiers = kCmdKey | kOptionKey | kShiftKey
 
     @State private var apiKey: String = ""
     @State private var showKeySaved = false

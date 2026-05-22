@@ -8,9 +8,10 @@ final class HotkeyManager {
     var onHotkeyPressed: (() -> Void)?
 
     init() {
-        if UserDefaults.standard.integer(forKey: "hotkey_keyCode") == 0 {
-            UserDefaults.standard.set(17, forKey: "hotkey_keyCode")           // T
-            UserDefaults.standard.set(Int(controlKey | shiftKey), forKey: "hotkey_modifiers") // Ctrl+Shift
+        let hasCustomShortcut = UserDefaults.standard.bool(forKey: "hotkey_customized")
+        if !hasCustomShortcut {
+            UserDefaults.standard.set(17, forKey: "hotkey_keyCode")                         // T
+            UserDefaults.standard.set(Int(cmdKey | optionKey | shiftKey), forKey: "hotkey_modifiers") // ⌘⌥⇧T
         }
     }
 
