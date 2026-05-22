@@ -26,10 +26,18 @@ enum DeepSeekTranslator {
         }
     }
 
-    enum TranslateError: Error {
+    enum TranslateError: LocalizedError {
         case noAPIKey
         case invalidResponse
         case httpError(Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .noAPIKey: return "未配置 API Key"
+            case .invalidResponse: return "服务器返回异常"
+            case .httpError(let code): return "HTTP 错误 (\(code))"
+            }
+        }
     }
 
     /// Translate `text` to `targetLang` ("Chinese" or "English") using DeepSeek API.

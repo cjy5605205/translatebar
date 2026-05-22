@@ -15,9 +15,16 @@ enum OllamaTranslator {
         let response: String
     }
 
-    enum TranslateError: Error {
+    enum TranslateError: LocalizedError {
         case notRunning
         case invalidResponse
+
+        var errorDescription: String? {
+            switch self {
+            case .notRunning: return "Ollama 未运行"
+            case .invalidResponse: return "Ollama 返回异常"
+            }
+        }
     }
 
     static func translate(_ text: String, to targetLang: String) async throws -> String {

@@ -1,8 +1,15 @@
 import Foundation
 
 enum TranslationEngine {
-    enum TranslateError: Error {
-        case allServicesFailed
+    enum TranslateError: Error, CustomStringConvertible {
+        case allServicesFailed(deepSeekError: String, ollamaError: String)
+
+        var description: String {
+            switch self {
+            case .allServicesFailed(let deepSeek, let ollama):
+                return "DeepSeek: \(deepSeek)\nOllama: \(ollama)"
+            }
+        }
     }
 
     /// Translates `text` from Chinese↔English automatically.
@@ -19,15 +26,21 @@ enum TranslationEngine {
         let targetLang = language == .chinese ? "English" : "Chinese"
 
         // Try DeepSeek first
+        let deepSeekError: String
         do {
             return try await DeepSeekTranslator.translate(text, to: targetLang)
         } catch {
-            // Fallback to Ollama
-            do {
-                return try await OllamaTranslator.translate(text, to: targetLang)
-            } catch {
-                throw TranslateError.allServicesFailed
-            }
+            deepSeekError = error.localizedDescription
         }
+
+        // Fallback to Ollama
+        let ollamaError: String
+        do {
+            return try await OllamaTranslator.translate(text, to: targetLang)
+        } catch {
+            ollamaError = error.localizedDescription
+        }
+
+        throw TranslateError.allServicesFailed(deepSeekError: deepSeekError, ollamaError: ollamaError)
     }
 }
